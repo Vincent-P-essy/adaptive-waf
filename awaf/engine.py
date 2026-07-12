@@ -50,7 +50,7 @@ class WAFEngine:
         return self.forest.fitted
 
     # -- training ----------------------------------------------------------
-    def fit(self, normal_requests: list[Request]) -> "WAFEngine":
+    def fit(self, normal_requests: list[Request]) -> WAFEngine:
         x = extract_batch(normal_requests)
         xs = self.scaler.fit_transform(x)
         self.forest.fit(xs)
@@ -116,7 +116,7 @@ class WAFEngine:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any], adjudicator: Any = None) -> "WAFEngine":
+    def from_dict(cls, d: dict[str, Any], adjudicator: Any = None) -> WAFEngine:
         engine = cls(d["block_threshold"], d["ambiguous_band"], adjudicator=adjudicator)
         engine.scaler = StandardScaler.from_dict(d["scaler"])
         engine.forest = IsolationForest.from_dict(d["forest"])

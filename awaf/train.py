@@ -6,8 +6,8 @@ labelled set. Run it to see the WAF's out-of-the-box precision/recall.
 
 from __future__ import annotations
 
-from .ingest import build_dataset, load_csic
 from .config import config
+from .ingest import build_dataset, load_csic
 from .service import AdaptiveWAF
 
 

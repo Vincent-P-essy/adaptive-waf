@@ -17,7 +17,7 @@ class StandardScaler:
         self.mean_: np.ndarray | None = None
         self.std_: np.ndarray | None = None
 
-    def fit(self, x: np.ndarray) -> "StandardScaler":
+    def fit(self, x: np.ndarray) -> StandardScaler:
         self.mean_ = x.mean(axis=0)
         std = x.std(axis=0)
         std[std == 0] = 1.0  # avoid divide-by-zero on constant features
@@ -36,7 +36,7 @@ class StandardScaler:
         return {"mean": self.mean_.tolist(), "std": self.std_.tolist()}
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "StandardScaler":
+    def from_dict(cls, d: dict[str, Any]) -> StandardScaler:
         s = cls()
         s.mean_ = np.asarray(d["mean"])
         s.std_ = np.asarray(d["std"])

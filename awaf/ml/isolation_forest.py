@@ -38,8 +38,8 @@ class _Node:
     size: int = 0
     split_feature: int | None = None
     split_value: float | None = None
-    left: "_Node | None" = None
-    right: "_Node | None" = None
+    left: _Node | None = None
+    right: _Node | None = None
 
     @property
     def is_external(self) -> bool:
@@ -52,7 +52,7 @@ class IsolationTree:
         self._rng = rng
         self.root: _Node | None = None
 
-    def fit(self, x: np.ndarray) -> "IsolationTree":
+    def fit(self, x: np.ndarray) -> IsolationTree:
         self.root = self._grow(x, 0)
         return self
 
@@ -82,10 +82,7 @@ class IsolationTree:
     def path_length(self, x: np.ndarray) -> float:
         node, height = self.root, 0
         while node is not None and not node.is_external:
-            if x[node.split_feature] < node.split_value:
-                node = node.left
-            else:
-                node = node.right
+            node = node.left if x[node.split_feature] < node.split_value else node.right
             height += 1
         return height + _c(node.size if node else 1)
 
@@ -98,7 +95,7 @@ class IsolationForest:
         self._trees: list[IsolationTree] = []
         self._c_norm = 1.0
 
-    def fit(self, x: np.ndarray) -> "IsolationForest":
+    def fit(self, x: np.ndarray) -> IsolationForest:
         rng = np.random.RandomState(self.seed)
         n = x.shape[0]
         sample = min(self.sample_size, n)
@@ -143,7 +140,7 @@ class IsolationForest:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "IsolationForest":
+    def from_dict(cls, d: dict[str, Any]) -> IsolationForest:
         forest = cls(d["n_trees"], d["sample_size"], d["seed"])
         forest._c_norm = d["c_norm"]
 
