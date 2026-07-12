@@ -30,6 +30,9 @@ class AdaptiveWAF:
         self.feedback_weight = feedback_weight if feedback_weight is not None else config.feedback_weight
         self.retrains = 0
         self.engine.fit(self._training_corpus())
+        # Freeze the calibrated threshold: retraining should adapt scores to
+        # analyst feedback, not silently shift the decision boundary underneath it.
+        self.engine.pin_threshold()
 
     def _training_corpus(self) -> list[Request]:
         # Base normal traffic plus analyst-confirmed benign requests, oversampled:

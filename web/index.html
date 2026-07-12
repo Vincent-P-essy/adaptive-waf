@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Adaptive WAF — console</title>
+  <style>
+    :root { --bg:#0b0f17; --panel:#131a26; --panel2:#1a2130; --border:#263145; --text:#e6edf3;
+      --muted:#8b98a9; --accent:#38bdf8; --block:#ef4444; --challenge:#f59e0b; --allow:#22c55e;
+      --mono:ui-monospace,Menlo,Consolas,monospace; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+    header { padding:14px 24px; background:var(--panel); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+    .brand { font-weight:700; letter-spacing:-.3px; }
+    main { max-width:960px; margin:0 auto; padding:24px; display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; }
+    .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin:0 0 14px; }
+    label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
+    input, textarea, select { width:100%; background:var(--panel2); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:8px 10px; font-size:13px; font-family:var(--mono); }
+    button { background:var(--accent); color:#06121c; border:none; border-radius:8px; padding:8px 12px; font-weight:600; cursor:pointer; font-size:13px; }
+    button.ghost { background:var(--panel2); color:var(--text); border:1px solid var(--border); }
+    .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .verdict { font-weight:700; padding:3px 12px; border-radius:999px; color:#06121c; font-size:13px; }
+    .BLOCK { background:var(--block); color:#fff; } .CHALLENGE { background:var(--challenge); } .ALLOW { background:var(--allow); }
+    .result { margin-top:14px; background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:13px; }
+    .result .line { display:flex; justify-content:space-between; padding:3px 0; }
+    .result .k { color:var(--muted); } .mono { font-family:var(--mono); }
+    .metrics { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .metric { background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
+    .metric .v { font-size:22px; font-weight:700; } .metric .k { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+    .examples button { font-size:12px; }
+    .full { grid-column:1 / -1; }
+    a { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Adaptive&nbsp;WAF</div>
+    <div id="status" class="mono" style="font-size:12px;color:var(--muted)"></div>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Inspect a request</h2>
+      <div class="examples row">
+        <button class="ghost" data-ex="normal">Normal</button>
+        <button class="ghost" data-ex="sqli">SQLi</button>
+        <button class="ghost" data-ex="xss">XSS</button>
+        <button class="ghost" data-ex="traversal">Traversal</button>
+      </div>
+      <label>Method</label>
+      <select id="method"><option>GET</option><option>POST</option></select>
+      <label>URL</label>
+      <input id="url" value="/products?id=42" />
+      <label>User-Agent</label>
+      <input id="ua" value="Mozilla/5.0 (X11; Linux x86_64) Firefox/125.0" />
+      <label>Body</label>
+      <textarea id="body" rows="2"></textarea>
+      <div class="row"><button id="inspect">Inspect</button></div>
+      <div id="result"></div>
+    </section>
+
+    <section class="card">
+      <h2>Model quality</h2>
+      <div id="metrics" class="metrics"></div>
+      <div class="row"><button id="retrain" class="ghost">Retrain on feedback</button>
+        <a href="/rules/export" target="_blank"><button class="ghost">Export ModSecurity rules</button></a></div>
+      <p style="color:var(--muted);font-size:12px;margin-top:14px">Report a wrong verdict above as feedback; the model retrains on analyst-confirmed benign requests and adapts.</p>
+    </section>
+  </main>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const EXAMPLES = {
+      normal: { url: "/products?id=42", body: "" },
+      sqli: { url: "/products?id=1' OR 1=1--", body: "" },
+      xss: { url: "/search?q=<script>alert(1)</script>", body: "" },
+      traversal: { url: "/download?file=../../../../etc/passwd", body: "" },
+    };
+    let lastRequest = null, lastVerdict = null;
+
+    document.querySelectorAll("[data-ex]").forEach((b) =>
+      b.addEventListener("click", () => { const e = EXAMPLES[b.dataset.ex]; $("#url").value = e.url; $("#body").value = e.body; }));
+
+    function reqBody() {
+      return { method: $("#method").value, url: $("#url").value,
+        headers: { "User-Agent": $("#ua").value }, body: $("#body").value };
+    }
+
+    $("#inspect").addEventListener("click", async () => {
+      lastRequest = reqBody();
+      const d = await fetch("/inspect", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(lastRequest) }).then((r) => r.json());
+      lastVerdict = d.decision;
+      const score = d.anomaly_score != null ? d.anomaly_score.toFixed(3) : "—";
+      $("#result").innerHTML = `
+        <div class="result">
+          <div class="line"><span class="k">verdict</span><span class="verdict ${d.decision}">${d.decision}</span></div>
+          <div class="line"><span class="k">layer</span><span class="mono">${d.layer}</span></div>
+          <div class="line"><span class="k">reason</span><span>${escapeHtml(d.reason)}</span></div>
+          <div class="line"><span class="k">anomaly score</span><span class="mono">${score}</span></div>
+          <div class="line"><span class="k">latency</span><span class="mono">${d.latency_ms} ms</span></div>
+          <div class="row">
+            <button id="fp">Report false positive (benign)</button>
+            <button id="fn" class="ghost">Report as malicious</button>
+          </div>
+        </div>`;
+      $("#fp").onclick = () => sendFeedback("benign");
+      $("#fn").onclick = () => sendFeedback("malicious");
+    });
+
+    async function sendFeedback(label) {
+      await fetch("/feedback", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ request: lastRequest, label, was: lastVerdict }) });
+      await refreshStatus();
+      alert(`Recorded ${label} feedback. Click "Retrain on feedback" to apply.`);
+    }
+
+    $("#retrain").addEventListener("click", async () => {
+      $("#retrain").textContent = "retraining…";
+      await fetch("/retrain", { method: "POST" });
+      $("#retrain").textContent = "Retrain on feedback";
+      await Promise.all([refreshMetrics(), refreshStatus()]);
+    });
+
+    async function refreshMetrics() {
+      const m = await fetch("/metrics").then((r) => r.json());
+      $("#metrics").innerHTML = [
+        ["precision", m.precision], ["recall", m.recall], ["F1", m.f1],
+        ["false positives", m.fp], ["FP rate", m.false_positive_rate], ["est. FP/day", m.estimated_fp_per_day],
+      ].map(([k, v]) => `<div class="metric"><div class="v">${v}</div><div class="k">${k}</div></div>`).join("");
+    }
+    async function refreshStatus() {
+      const s = await fetch("/healthz").then((r) => r.json());
+      $("#status").textContent = `adjudicator: ${s.adjudicator} · retrains: ${s.retrains} · feedback: ${s.feedback.total}`;
+    }
+    function escapeHtml(s){return String(s).replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+    refreshMetrics(); refreshStatus();
+  </script>
+</body>
+</html>
