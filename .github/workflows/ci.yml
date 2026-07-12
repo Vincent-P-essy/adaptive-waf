@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: ruff check awaf tests
+
+      - name: Test (pytest + coverage)
+        run: pytest --cov=awaf --cov-report=term-missing --cov-fail-under=85
+
+      - name: Evaluate model quality
+        run: python -m awaf.train
+
+      - name: Demonstrate the feedback loop
+        run: python -m awaf.demo_feedback
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t adaptive-waf:ci .
+      - name: Smoke test the container
+        run: |
+          docker run -d --name waf -p 8000:8000 adaptive-waf:ci
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/healthz > /dev/null; then
+              echo "healthz OK"; curl -s http://localhost:8000/healthz; docker rm -f waf; exit 0
+            fi
+            sleep 2
+          done
+          echo "healthz never came up"; docker logs waf; docker rm -f waf; exit 1

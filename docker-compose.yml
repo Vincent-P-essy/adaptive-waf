@@ -1,0 +1,14 @@
+services:
+  waf:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AWAF_MODEL: ${AWAF_MODEL:-claude-opus-4-8}
+      AWAF_TARGET_FPR: ${AWAF_TARGET_FPR:-0.01}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
