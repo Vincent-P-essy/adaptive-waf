@@ -1,0 +1,56 @@
+{
+  "jobs": [
+    {
+      "root": ".",
+      "label": "adaptive-waf",
+      "caption": "The local inspection interface with the SQL injection example. The rule and ML test results are included; model-provider integrations and live traffic are not exercised.",
+      "setup": [
+        [
+          "python",
+          "-m",
+          "pip",
+          "install",
+          "-r",
+          "requirements.txt"
+        ],
+        [
+          "python",
+          "-m",
+          "pip",
+          "install",
+          "pytest",
+          "socksio"
+        ]
+      ],
+      "commands": [
+        [
+          "python",
+          "-m",
+          "pytest",
+          "-v",
+          "--tb=short"
+        ]
+      ],
+      "server": [
+        "python",
+        "-m",
+        "uvicorn",
+        "awaf.api:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8650"
+      ],
+      "actions": [
+        {
+          "type": "click",
+          "name": "SQLi"
+        },
+        {
+          "type": "click",
+          "name": "Inspect"
+        }
+      ]
+    }
+  ]
+}

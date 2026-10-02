@@ -73,7 +73,7 @@
     const EXAMPLES = {
       normal: { url: "/products?id=42", body: "" },
       sqli: { url: "/products?id=1' OR 1=1--", body: "" },
-      xss: { url: "/search?q=<script>alert(1)</script>", body: "" },
+      xss: { url: "/search?q=\x3cscript>alert(1)\x3c/script>", body: "" },
       traversal: { url: "/download?file=../../../../etc/passwd", body: "" },
     };
     let lastRequest = null, lastVerdict = null;
