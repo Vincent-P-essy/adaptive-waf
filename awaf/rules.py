@@ -50,10 +50,10 @@ RULES: list[Rule] = [
          r"(<script\b|onerror\s*=|onload\s*=|javascript:|<img[^>]+src\s*=\s*x)"),
     Rule("LFI-1", "Path traversal / LFI", "path_traversal",
          r"(\.\./|\.\.%2f|\.\.\\|/etc/passwd|/etc/shadow|boot\.ini|win\.ini)"),
-    Rule("SSRF-1", "Server-side request forgery", "ssrf",
-         r"(169\.254\.169\.254|file://|gopher://|127\.0\.0\.1|localhost:\d+|metadata\.google)"),
     Rule("CMDI-1", "OS command injection", "cmdi",
          r"(;\s*(cat|ls|id|whoami|uname)\b|\|\s*(whoami|id|nc)\b|\$\([^)]+\)|`[^`]+`)"),
+    Rule("SSRF-1", "Server-side request forgery", "ssrf",
+         r"(169\.254\.169\.254|file://|gopher://|127\.0\.0\.1|localhost:\d+|metadata\.google)"),
     Rule("SCAN-1", "Automated scanner user-agent", "scanner",
          r"(sqlmap|nikto|nmap|masscan|acunetix|dirbuster|wpscan)", target=TARGET_UA),
 ]
