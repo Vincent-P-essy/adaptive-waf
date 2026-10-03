@@ -11,6 +11,12 @@ the model on analyst-corrected false positives so it adapts to *your* traffic.
 
 ---
 
+## Dashboard Preview
+
+![Adaptive WAF request inspection and model metrics](docs/screenshots/dashboard-overview.png)
+
+Local execution using the bundled bootstrap corpus and the SQL injection example provided by the interface.
+
 ## What makes it "adaptive"
 
 Most ML-security projects make a prediction and stop. This one **closes the
